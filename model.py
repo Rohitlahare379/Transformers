@@ -16,15 +16,12 @@ class InputEmbeddings(nn.Module):
         self.vocab_size = vocab_size
 
         # Create an embedding lookup table.
-        #
         # Input: a token ID, such as 42
         # Output: a vector with `d_model` numbers
-        #
         # It has one vector for every possible token ID.
         self.embedding = nn.Embedding(vocab_size, d_model)
 
     # This defines what happens when token IDs enter this layer.
-    #
     # `x` should be a PyTorch tensor containing token IDs, for example:
     # x = torch.tensor([5, 12, 83])
     def forward(self, x):
@@ -62,15 +59,27 @@ class PositionEncoding(nn.Module):
         x = x + (self.pe[:, :x.shape[1], :])
         return self.dropout(x)
 
-    class LayerNormalization(nn.Module):
+class LayerNormalization(nn.Module):
 
-        def __init__(self, eps: float = 10** -6) -> None:
-            super().__init__()
-            self.eps = eps
-            self.alpha = nn.Parameter(torch.ones(1)) #multiplied
-            self.bias = nn.Parameter(torch.zeros(1)) #added
+    def __init__(self, eps: float = 10** -6) -> None:
+        super().__init__()
+        self.eps = eps
+        self.alpha = nn.Parameter(torch.ones(1)) #multiplied
+        self.bias = nn.Parameter(torch.zeros(1)) #added
 
-        def forward(self, x):
-            mean = x.mean(dim = -1, keepdim = True)
-            std = x.std(dim = -1, keepdim = True)
-            return self.alpha * (x - mean) / (std + self.eps) + self.bias
+    def forward(self, x):
+        mean = x.mean(dim = -1, keepdim = True)
+        std = x.std(dim = -1, keepdim = True)
+        return self.alpha * (x - mean) / (std + self.eps) + self.bias
+
+class FeedForwardBlock(nn.Module):
+
+    def __init__(self, d_model: int, d_ff: int, dropout: float) -> None:
+        super().__init__()
+        self.linear_1 = nn.Linear(d_model, d_ff) #W1 and B1
+        self.dropout = nn.Dropout(dropout)
+        self.linear_2 = nn.Linear(d_ff, d_model)
+
+    def forward(self, x):
+        #(Batch, Seq_Len, d_model) --> (Batch, Seq_Len, d_ff) --> (Batch, Seq_Len, d_model)
+        return self.linear_2(self.dropout(torch.relu(self.linear_1(x))))
